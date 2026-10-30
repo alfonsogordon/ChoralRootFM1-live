@@ -665,6 +665,12 @@ static void cu_pos_sync(void)
 /* ChoralRoot+ live-drum commands always travel through the audio event queue.
  * This UI-facing adapter keeps the ISR's transport state single-owned. */
 static uint8_t cu_drums_running;
+static uint8_t cu_root_latch;
+static void cu_root_latch_toggle(void) {
+    cu_root_latch ^= 1u;
+    cr_post(CRE_DRUM, 6, 0, cu_root_latch);
+}
+
 static void cu_drums_start(void) { cr_post(CRE_DRUM, 1, 0, 0); }
 static void cu_drums_stop(void) { cr_post(CRE_DRUM, 0, 0, 0); }
 static void cu_drums_mute(unsigned lane) { if (lane < CR_DR_PARTS) cr_post(CRE_DRUM, 2, lane, 0); }
@@ -5064,7 +5070,10 @@ static void cu_btn_press(uint32_t b)
             cu_trace("drums: variation A/B\\n");
         } else if (b == BT_BASS) {
             cu_drums_action(CR_DR_ACT_FILL);
-            cu_trace("drums: fill queued\\n");
+            cu_trace("drums: fill queued\n");
+        } else if (b == BT_KEY) {
+            cu_root_latch_toggle();
+            cu_trace("drums: root latch %s\n", cu_root_latch ? "on" : "off");
         }
     }
     if (cu.armed == BT_OPT && b == BT_METRO && !(cu.page == PG_EDIT && !cu_layer()))
