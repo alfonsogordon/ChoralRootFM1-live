@@ -664,7 +664,6 @@ static void cu_pos_sync(void)
 
 /* ChoralRoot+ live-drum commands always travel through the audio event queue.
  * This UI-facing adapter keeps the ISR's transport state single-owned. */
-static uint8_t cu_drums_running;
 static uint8_t cu_root_latch;
 static void cu_root_latch_toggle(void) {
     cu_root_latch ^= 1u;
@@ -5061,10 +5060,9 @@ static void cu_btn_press(uint32_t b)
      * Do not hijack these shortcuts inside the sound editor. */
     if (cu.armed == BT_OPT && cu.page != PG_EDIT && !cu_layer()) {
         if (b == BT_PERF) {
-            cu_drums_running ^= 1u;
-            if (cu_drums_running) cu_drums_start();
-            else cu_drums_stop();
-            cu_trace("drums: %s\\n", cu_drums_running ? "start" : "stop");
+            if (cr_dr_clock.drums.running) cu_drums_stop();
+            else cu_drums_start();
+            cu_trace("drums: %s\\n", cr_dr_clock.drums.running ? "stop" : "start");
         } else if (b == BT_FX) {
             cu_drums_variation();
             cu_trace("drums: variation A/B\\n");
