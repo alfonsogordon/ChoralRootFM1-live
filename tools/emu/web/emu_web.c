@@ -149,6 +149,15 @@ WEB_EXPORT void web_boot(void)
 /* Read-only live status, queried by the audio worklet after processing commands.
  * Bits 0..7 mute lanes, bit 8 transport, bit 9 variation, bits 10..12
  * active action. The UI displays firmware state rather than guessing. */
+/* Diagnostics for the real drum audio path (part 3). */
+WEB_EXPORT uint32_t web_drums_diag(void)
+{
+    uint32_t active = 0, i;
+    for (i = 0; i < NVOICE; ++i)
+        active += !!trk[3].v[i].active;
+    return ((uint32_t)trk[3].eng_req & 255u) | (active << 8) |
+           ((uint32_t)!!cr_ready << 16);
+}
 WEB_EXPORT uint32_t web_drums_state(void)
 {
     const cr_live_drums_t *d = &cr_dr_clock.drums;
