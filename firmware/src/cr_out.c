@@ -876,6 +876,20 @@ static void cr_out_init(void)                    /* power-on (the audio ISR may 
         fx_master_now(master_pot_q12 - 1u);
     cr_init(&cr, &CR_OUT);
     cr_seed(&cr, 0x43524631u);
+#if FELUCCA_DRUM
+    /* ChoralRoot initialises only its chord/bass tracks. Initialise the
+     * separate accompaniment part explicitly; the inherited TRK_DEF does
+     * not run when Felucca's sequencer is disabled. */
+    trk[3].eng_req = ENGI_DRUM;
+    trk[3].engine = ENGI_DRUM;
+    trk[3].p[P_LEVEL] = 100;
+    {
+        uint32_t k;
+        for (k = 0; k < 8u; ++k)
+            trk[3].p[P_E0 + k] = ENG_DRUM.edit[k].def;
+    }
+    cr_dr_clock_init(&cr_dr_clock);
+#endif
     voice_fade_steal = 1;                        /* voice.c: a stolen voice fades out, its new note waits a block */
     fx_smooth = 1;                               /* fx.c: the limiter's gain eased (no audio-rate crackle), the delay's
                                                   * new times crossfaded (no click on a tempo change) */
