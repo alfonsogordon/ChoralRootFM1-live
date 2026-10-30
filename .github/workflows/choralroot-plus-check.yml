@@ -24,6 +24,10 @@ jobs:
           version: '4.0.15'
       - name: Generate firmware headers
         run: python -c 'import sys; sys.path.insert(0, "tools"); import build; build.generate()'
+      - name: Test drum pattern logic
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -Ifirmware/src tests/cr_dr_patterns_test.c -o /tmp/cr_dr_patterns_test
+          /tmp/cr_dr_patterns_test
       - name: Build browser firmware
         run: sh tools/emu/web/build_web.sh
       - name: Upload browser preview for inspection
