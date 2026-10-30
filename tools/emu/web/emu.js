@@ -350,6 +350,14 @@
       });
     });
   });
+  const quantSelect = document.getElementById("drum-quant");
+  const autoCheckbox = document.getElementById("drum-auto");
+  if (quantSelect) quantSelect.onchange = () => {
+    if (node) node.port.postMessage({ type: "drums", op: 7, value: Number(quantSelect.value) });
+  };
+  if (autoCheckbox) autoCheckbox.onchange = () => {
+    if (node) node.port.postMessage({ type: "drums", op: 8, value: autoCheckbox.checked ? 1 : 0 });
+  };
   const latchButton = document.getElementById("root-note-latch");
   let latchEnabled = false;
   if (latchButton) latchButton.onclick = () => {
@@ -360,6 +368,8 @@
     if (raw == null) return;
     const muted = raw & 255, running = !!(raw & 256);
     latchEnabled = !!(raw & (1 << 13));
+    if (quantSelect) quantSelect.value = String((raw >> 16) & 7);
+    if (autoCheckbox) autoCheckbox.checked = !!(raw & (1 << 15));
     if (latchButton) {
       latchButton.textContent = "Root Latch: " + (latchEnabled ? "On" : "Off");
       latchButton.setAttribute("aria-pressed", String(latchEnabled));
@@ -370,7 +380,10 @@
     const state = document.getElementById("drum-status");
     if (state) state.textContent = "Drums " + (running ? "running" : "stopped") +
       " · variation " + variation + " · " + count + "/8 lanes active" +
-      (action ? " · " + ["", "Fill", "Bridge", "Break"][action] : "");
+      (action ? " · " + ["", "Fill", "Bridge", "Break"][action] : "") +
+      (((raw >> 20) & 7) ? " · queued " + ["", "Fill", "Bridge", "Break"][(raw >> 20) & 7] : "") +
+      ((raw & (1 << 19)) ? " · A/B queued" : "") +
+      (!running && !(raw & (1 << 15)) ? " · manual stop (re-arm with Start)" : "");
     document.querySelectorAll('[data-drum-op="2"]').forEach((button) => {
       const isMuted = !!(muted & (1 << Number(button.dataset.drumValue)));
       button.setAttribute("aria-pressed", String(isMuted));
