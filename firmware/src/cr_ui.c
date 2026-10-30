@@ -665,6 +665,8 @@ static void cu_pos_sync(void)
 /* ChoralRoot+ live-drum commands always travel through the audio event queue.
  * This UI-facing adapter keeps the ISR's transport state single-owned. */
 static uint8_t cu_root_latch;
+static uint8_t cu_dr_quant = 2;
+static uint8_t cu_dr_auto = 1;
 static void cu_root_latch_toggle(void) {
     cu_root_latch ^= 1u;
     cr_post(CRE_DRUM, 6, 0, cu_root_latch);
@@ -1165,6 +1167,7 @@ enum { O_STYLE, O_EXTADD, O_SECRET,
 #endif
        O_BASSMODE, O_SINGLE, O_SPLIT, O_CH_MAIN, O_CH_BASS, O_CH_RAW, O_RAW_SOUND,
        O_CLOCK, O_VIEW, O_MOTION, O_NAMES, O_LEDS, O_HOLD, O_USB_IN, O_USB_LEVEL, O_USB_RATE, O_DUALCORE, O_OUTPUT,
+       O_DR_QUANT, O_DR_LATCH, O_DR_AUTO, O_DR_RUN, O_DR_PATTERN, O_DR_FILL, O_DR_BREAK,
        O_VERSION,
        O_CALIB,
        O_RESET,                           /* Reset Settings: the last entry of a normal session */
@@ -1179,6 +1182,7 @@ static const char *const O_NAME[O_N] = {"Play Style", "Extension Addition", "Sec
 #endif
     "Bass Behaviour", "Single Notes", "Split Point", "MIDI Perform", "MIDI Bass", "MIDI Raw Chord", "Raw Chord Sound",
     "MIDI Clock", "View", "Motion", "Chord Names", "LEDs", "Hold Time", "USB Record", "USB Level", "USB Rate", "Dual Core", "Output",
+    "Drum Quantize", "Drum Latch", "Drum Auto Start", "Drum Transport", "Drum Pattern", "Drum Fill", "Drum Break",
     "Version",
     "Calibrate", "Reset Settings", "Safe Mode", "Flash Data"};
 static const int16_t O_MAX[O_N] = {2, 1, 2, 1, 10, 1, 16, 1, 127, CU_TOUCH_MAX, 2, CU_VCURVE_MAX, CU_ATSENS_MAX,
@@ -1186,7 +1190,7 @@ static const int16_t O_MAX[O_N] = {2, 1, 2, 1, 10, 1, 16, 1, 127, CU_TOUCH_MAX, 
                                    1,
 #endif
                                    3, 2, 11, 16, 16,
-                                   16, 1, 2, V_N - 1, CR_MOTION_N - 1, 1, 1, 3, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0};
+                                   16, 1, 2, V_N - 1, CR_MOTION_N - 1, 1, 1, 3, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0};
 static uint32_t cu_opt_n(void) { return cr_safe ? O_N : O_N_NORMAL; }
 /* an entry listed (docs/CHORD-LAYOUT.md): the chord layouts' four not on the SMK-37 (its chord keys are pads), the
  * SUS Window only while Chord Keys is FM-1. SELECT skips the others (cu_opt_next); their values are kept */
@@ -1279,6 +1283,13 @@ static int32_t opt_get(uint32_t o)
     case O_USB_LEVEL: return cs.usb_fixed;
     case O_USB_RATE: return cs.usb48;
     case O_DUALCORE: return cs.dualcore;
+    case O_DR_QUANT: return cu_dr_quant;
+    case O_DR_LATCH: return cu_root_latch;
+    case O_DR_AUTO: return cu_dr_auto;
+    case O_DR_RUN: return cr_dr_clock.drums.running;
+    case O_DR_PATTERN: return cr_dr_clock.drums.variation;
+    case O_DR_FILL: return cr_dr_clock.drums.queued_action == CR_DR_ACT_FILL;
+    case O_DR_BREAK: return cr_dr_clock.drums.queued_action == CR_DR_ACT_BREAK;
     case O_OUTPUT: return cs.out_clean;
     default: return 0;
     }
@@ -1287,6 +1298,13 @@ static void opt_set(uint32_t o, int32_t v)
 {
     v = v < (o == O_VEL ? 1 : 0) ? (o == O_VEL ? 1 : 0) : v > O_MAX[o] ? O_MAX[o] : v;
     switch (o) {
+    case O_DR_QUANT: cu_dr_quant = (uint8_t)v; cr_post(CRE_DRUM, 7, 0, v); break;
+    case O_DR_LATCH: if ((uint8_t)v != cu_root_latch) cu_root_latch_toggle(); break;
+    case O_DR_AUTO: cu_dr_auto = (uint8_t)v; cr_post(CRE_DRUM, 8, 0, v); break;
+    case O_DR_RUN: if (v) cu_drums_start(); else cu_drums_stop(); break;
+    case O_DR_PATTERN: if ((uint8_t)v != cr_dr_clock.drums.variation) cu_drums_variation(); break;
+    case O_DR_FILL: if (v) cu_drums_action(CR_DR_ACT_FILL); break;
+    case O_DR_BREAK: if (v) cu_drums_action(CR_DR_ACT_BREAK); break;
     case O_STYLE: cs.playstyle = (uint8_t)v; cr_post(CRE_PLAYSTYLE, 0, 0, v); break;
     case O_EXTADD: cs.extadd = (uint8_t)v; cr_post(CRE_EXTADD, 0, 0, v); break;
     case O_SECRET: cs.secret = (uint8_t)v; cr_post(CRE_SECRET, 0, 0, v); break;
@@ -1399,6 +1417,11 @@ static void opt_text(uint32_t o, char *d, uint32_t n)
     int32_t v = opt_get(o);
     d[0] = 0;
     switch (o) {
+    case O_DR_QUANT: { static const char *const Q[5] = {"Immediate", "1/16", "1/8", "1/4", "1 bar"}; cu_cpy(d, Q[v % 5], n); break; }
+    case O_DR_LATCH: case O_DR_AUTO: cu_cpy(d, ONOFF[v & 1], n); break;
+    case O_DR_RUN: cu_cpy(d, v ? "Playing" : "Stopped", n); break;
+    case O_DR_PATTERN: cu_cpy(d, v ? "B" : "A", n); break;
+    case O_DR_FILL: case O_DR_BREAK: cu_cpy(d, v ? "Queued" : "Turn to queue", n); break;
     case O_STYLE: cu_cpy(d, STYLE[v % 3], n); break;
     case O_EXTADD: cu_cpy(d, EXTADD[v & 1], n); break;
     case O_SECRET: cu_cpy(d, SECRET[v % 3], n); break;
