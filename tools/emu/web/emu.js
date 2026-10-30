@@ -328,6 +328,29 @@
     }
   })();
 
+  // ChoralRoot+ drum panel controls the SAME WebAssembly firmware as the keyboard.
+  let drumsRunning = false, drumsVariation = false, drumsMuted = 0;
+  document.querySelectorAll("[data-drum-op]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!node) { status("Press Start to enable the firmware audio first."); return; }
+      const op = Number(button.dataset.drumOp);
+      const value = Number(button.dataset.drumValue || 0);
+      node.port.postMessage({ type: "drums", op, value });
+      if (op === 0) drumsRunning = false;
+      if (op === 1) drumsRunning = true;
+      if (op === 2) {
+        drumsMuted ^= 1 << value;
+        button.setAttribute("aria-pressed", String(!!(drumsMuted & (1 << value))));
+        button.style.opacity = drumsMuted & (1 << value) ? "0.45" : "1";
+      }
+      if (op === 3) drumsVariation = !drumsVariation;
+      const state = document.getElementById("drum-status");
+      if (state) state.textContent = "Drums " + (drumsRunning ? "running" : "stopped") +
+        " · variation " + (drumsVariation ? "B" : "A") +
+        " · " + (8 - drumsMuted.toString(2).replace(/0/g, "").length) + "/8 lanes active";
+    });
+  });
+
   $("start").onclick = async () => {
     $("start").disabled = true;
     try {
