@@ -29,8 +29,15 @@ int main(void) {
     cr_dr_clock_advance(&c, 6000 * 32, 48000, 120, sink, 0);
     assert(count == 33 && c.drums.bar == 2);
     assert(last_step == 0);
+    cr_dr_mute_toggle(&c.drums, CR_DR_KICK);
+    cr_dr_variation_toggle(&c.drums);
+    cr_dr_queue(&c.drums, CR_DR_ACT_BRIDGE);
     cr_dr_clock_stop(&c);
     cr_dr_clock_start(&c);
+    assert(!cr_dr_audible(&c.drums, CR_DR_KICK));
+    assert(c.drums.variation == 1);
+    assert(c.drums.queued_action == CR_DR_ACT_NONE);
+    assert(c.drums.active_action == CR_DR_ACT_NONE);
     count = 0;
     cr_dr_clock_advance(&c, 0, 48000, 120, sink, 0);
     assert(count == 1 && last_step == 0);
