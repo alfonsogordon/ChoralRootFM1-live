@@ -5,10 +5,10 @@
 #ifndef CR_LIVE_DRUMS_H
 #define CR_LIVE_DRUMS_H
 #include <stdint.h>
-enum { CR_DR_KICK, CR_DR_SNARE, CR_DR_HATS, CR_DR_PERC, CR_DR_PARTS };
+enum { CR_DR_KICK, CR_DR_SNARE, CR_DR_CLAP, CR_DR_HAT_CLOSED, CR_DR_HAT_OPEN, CR_DR_TOM, CR_DR_RIM, CR_DR_BELL, CR_DR_PARTS };
 enum { CR_DR_ACT_NONE, CR_DR_ACT_FILL, CR_DR_ACT_BRIDGE, CR_DR_ACT_BREAK };
 typedef struct {
-    uint8_t mute_mask;       /* bit 1 = muted; independent of current variation */
+    uint8_t mute_mask;       /* 8 independent lanes; bit 1 = muted */
     uint8_t variation;       /* 0 = A, 1 = B */
     uint8_t running;
     uint8_t queued_action;
