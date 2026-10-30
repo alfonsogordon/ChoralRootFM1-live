@@ -40,7 +40,7 @@
 #define GRAIN_ASYNC 1                                 /* as choralroot.c: its renders from the idle hook (emu_fw_idle) */
 #endif
 #ifndef FELUCCA_DRUM
-#define FELUCCA_DRUM 0
+#define FELUCCA_DRUM 1
 #endif
 #ifndef FELUCCA_ANALOG
 #define FELUCCA_ANALOG 0                              /* as choralroot.c: ANALOG retired (engine 0) */
