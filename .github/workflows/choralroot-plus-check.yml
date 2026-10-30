@@ -38,6 +38,8 @@ jobs:
           node --check tools/emu/web/worklet.js
       - name: Build browser firmware
         run: sh tools/emu/web/build_web.sh
+      - name: Verify actual WebAssembly drum audio
+        run: node tools/emu/web/test_drums_audio.mjs
       - name: Upload browser preview for inspection
         if: always()
         uses: actions/upload-artifact@v4
