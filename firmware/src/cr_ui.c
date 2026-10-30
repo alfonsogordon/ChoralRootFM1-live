@@ -664,6 +664,7 @@ static void cu_pos_sync(void)
 
 /* ChoralRoot+ live-drum commands always travel through the audio event queue.
  * This UI-facing adapter keeps the ISR's transport state single-owned. */
+static uint8_t cu_drums_running;
 static void cu_drums_start(void) { cr_post(CRE_DRUM, 1, 0, 0); }
 static void cu_drums_stop(void) { cr_post(CRE_DRUM, 0, 0, 0); }
 static void cu_drums_mute(unsigned lane) { if (lane < CR_DR_PARTS) cr_post(CRE_DRUM, 2, lane, 0); }
@@ -5049,6 +5050,23 @@ static void cu_btn_press(uint32_t b)
     }
 #endif
     cu_activity();
+    /* ChoralRoot+ live accompaniment: GLO + PERF toggles drum transport;
+     * GLO + FX switches A/B; GLO + BASS queues a one-bar fill.
+     * Do not hijack these shortcuts inside the sound editor. */
+    if (cu.armed == BT_OPT && cu.page != PG_EDIT && !cu_layer()) {
+        if (b == BT_PERF) {
+            cu_drums_running ^= 1u;
+            if (cu_drums_running) cu_drums_start();
+            else cu_drums_stop();
+            cu_trace("drums: %s\\n", cu_drums_running ? "start" : "stop");
+        } else if (b == BT_FX) {
+            cu_drums_variation();
+            cu_trace("drums: variation A/B\\n");
+        } else if (b == BT_BASS) {
+            cu_drums_action(CR_DR_ACT_FILL);
+            cu_trace("drums: fill queued\\n");
+        }
+    }
     if (cu.armed == BT_OPT && b == BT_METRO && !(cu.page == PG_EDIT && !cu_layer()))
         cu_metro_toggle();                         /* GLO held + SEQ: the click on / off, from anywhere but the sound
                                                     * editor (SHIFT and MOD there) */
