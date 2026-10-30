@@ -1681,8 +1681,17 @@ static void mix_block(int32_t *out, uint32_t n)
 #endif
     for (; i < MIX_NPART; i++)
         mix_part(&trk[i], n);
-    for (; i < NPART; i++)
-        mix_part_idle(&trk[i], n);
+    for (; i < NPART; i++) {
+#if FELUCCA_DRUM && !FELUCCA_SEQ
+        /* ChoralRoot+ reserves only two full synth engine states, but the
+         * accompaniment's one-shot DRUM kit lives in its separate drum_kit.
+         * Rendering part 3 is essential: idle processing discards its hits. */
+        if (i == 3u && trk[i].eng_req == ENGI_DRUM)
+            mix_part(&trk[i], n);
+        else
+#endif
+            mix_part_idle(&trk[i], n);
+    }
 #if FELUCCA_PERFORM
     if (perf)
         perf_pre(mix_l, mix_r, send_d, send_r, n);
