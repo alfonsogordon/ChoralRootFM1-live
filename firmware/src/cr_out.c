@@ -268,6 +268,19 @@ static uint8_t cr_ono[CR_NSTREAM][128];
 #define CR_OPART_SET(s, n, v) (cr_ono[s][n] = (uint8_t)((cr_ono[s][n] & 31u) | (v) << 5))
 static uint32_t cr_now_ms, cr_ms_rem;            /* the engine clock: audio samples -> ms */
 static uint32_t cr_clk_acc;                      /* MIDI clock: samples x bpm x 24 since the last pulse */
+/* ChoralRoot+ accompaniment transport, initially stopped. The MIDI drum channel
+ * is deliberately separate from chord and bass routing. */
+#include "cr_dr_clock.h"
+static cr_dr_clock_t cr_dr_clock;
+static void cr_dr_emit_midi(void *unused, uint8_t step, uint8_t mask)
+{
+    unsigned lane;
+    (void)unused;
+    (void)step;
+    for (lane = 0; lane < CR_DR_PARTS; ++lane)
+        if (mask & (1u << lane))
+            cr_midi(0x99u, cr_dr_gm_notes[lane], 100u);
+}
 static volatile uint16_t cr_out_bpm = 120;       /* the tempo the clock pulses at (the UI sets it with the engine's) */
 static volatile uint32_t cr_out_notes;           /* note-ons emitted (diagnostics, the emulator's dump) */
 static volatile uint8_t cr_ready;                /* the engine is initialised (the ISR may run before the UI's power-on) */
@@ -889,6 +902,7 @@ static void cr_audio_block(uint32_t n)
         cr_now_ms++;
     }
     cr_tick(&cr, cr_now_ms);
+    cr_dr_clock_advance(&cr_dr_clock, n, FS, cr_out_bpm, cr_dr_emit_midi, 0);
     cr_loop_tick(&crl, &cr, cr_now_ms);          /* the loop's playback and capture, the click */
     if (crl_stage_busy == 2u && !crl.next_on)
         crl_stage_busy = 0;
