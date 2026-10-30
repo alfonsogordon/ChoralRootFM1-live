@@ -350,9 +350,20 @@
       });
     });
   });
+  const latchButton = document.getElementById("root-note-latch");
+  let latchEnabled = false;
+  if (latchButton) latchButton.onclick = () => {
+    if (!node) { status("Press Start to enable audio first."); return; }
+    node.port.postMessage({ type: "drums", op: 6, value: latchEnabled ? 0 : 1 });
+  };
   const updateDrums = (raw) => {
     if (raw == null) return;
     const muted = raw & 255, running = !!(raw & 256);
+    latchEnabled = !!(raw & (1 << 13));
+    if (latchButton) {
+      latchButton.textContent = "Root Latch: " + (latchEnabled ? "On" : "Off");
+      latchButton.setAttribute("aria-pressed", String(latchEnabled));
+    }
     const variation = raw & 512 ? "B" : "A";
     const action = (raw >> 10) & 7;
     const count = 8 - muted.toString(2).replace(/0/g, "").length;
