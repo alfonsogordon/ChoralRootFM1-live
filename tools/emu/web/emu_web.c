@@ -151,6 +151,15 @@ WEB_EXPORT void web_boot(void)
  * knob 0..7 (K1..K8) n detents (+ clockwise), pad 0..15 (0..7 the top row) at velocity vel (0: let go), fader 0..3
  * 0..127, wheel 0 pitch / 1 mod as a raw reading (pitch 445..640, at rest 535; mod 474 top .. 629 bottom) */
 /* Integrated ChoralRoot+ drum controls: same event queue as the physical UI. */
+/* Read-only live status, queried by the audio worklet after processing commands.
+ * Bits 0..7 mute lanes, bit 8 transport, bit 9 variation, bits 10..12
+ * active action. The UI displays firmware state rather than guessing. */
+WEB_EXPORT uint32_t web_drums_state(void)
+{
+    const cr_live_drums_t *d = &cr_dr_clock.drums;
+    return (uint32_t)d->mute_mask | ((uint32_t)!!d->running << 8) |
+           ((uint32_t)!!d->variation << 9) | ((uint32_t)d->active_action << 10);
+}
 WEB_EXPORT uint32_t web_drums_tempo(uint32_t bpm)
 {
     if (bpm < 40u || bpm > 240u) return 0;
