@@ -328,6 +328,17 @@
     }
   })();
 
+  const drumTempoApply = document.getElementById("drum-tempo-apply");
+  if (drumTempoApply) drumTempoApply.onclick = () => {
+    if (!node) { status("Press Start before changing tempo."); return; }
+    const bpm = Number(document.getElementById("drum-bpm").value);
+    if (!Number.isInteger(bpm) || bpm < 40 || bpm > 240) {
+      status("Drum tempo must be between 40 and 240 BPM.");
+      return;
+    }
+    node.port.postMessage({ type: "drum-tempo", bpm });
+    status("Firmware tempo set to " + bpm + " BPM.");
+  };
   // ChoralRoot+ drum panel controls the SAME WebAssembly firmware as the keyboard.
   let drumsRunning = false, drumsVariation = false, drumsMuted = 0;
   document.querySelectorAll("[data-drum-op]").forEach((button) => {
