@@ -683,7 +683,7 @@ static void cr_apply(const cr_ev_in_t *e)
     case CRE_MODTOUCH: cr_mod_touch(&cr, (uint8_t)e->v); break;
     case CRE_VOICING: cr_voicing_step(&cr, e->v); break;
     case CRE_BASS_VOICING: cr_bass_voicing_step(&cr, e->v); break;
-    case CRE_PANIC: cr_panic(&cr); cr_loop_panic(&crl); break;
+    case CRE_PANIC: cr_panic(&cr); cr_loop_panic(&crl); cr_dr_clock_stop(&cr_dr_clock); break;
     case CRE_PLAYSTYLE: cr_set_playstyle(&cr, (cr_playstyle_t)e->v); break;
     case CRE_EXTADD: cr_set_ext_addition(&cr, (cr_extadd_t)e->v); break;
     case CRE_SECRET: cr_set_secret(&cr, (cr_secret_t)e->v); break;
