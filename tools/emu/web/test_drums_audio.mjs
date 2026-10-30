@@ -21,8 +21,10 @@ const ex = instance.exports;
 mem = ex.memory;
 ex._initialize?.();
 ex.web_boot();
+console.log("Drum diag immediately after boot:", ex.web_drums_diag?.().toString(16));
 ex.web_master(850);
 for (let i = 0; i < 30; ++i) ex.web_render(128);
+console.log("Drum diag after warmup:", ex.web_drums_diag?.().toString(16));
 if (typeof ex.web_drums !== "function" || typeof ex.web_drums_state !== "function")
   throw Error("Drum controls not exported by WASM");
 if (ex.web_drums_state() & 256) throw Error("Drums should start stopped");
