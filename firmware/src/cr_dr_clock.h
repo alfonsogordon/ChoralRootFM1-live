@@ -20,6 +20,12 @@ static inline void cr_dr_clock_start(cr_dr_clock_t *c) {
     c->phase = 0;
     c->step = 0;
     c->drums.bar = 0;
+    /* A stopped transport must not replay an old queued fill/bridge/break.
+     * Keep the player's mutes and A/B variation across restarts. */
+    c->drums.queued_action = CR_DR_ACT_NONE;
+    c->drums.active_action = CR_DR_ACT_NONE;
+    c->drums.action_bars = 0;
+    c->drums.fill_held = 0;
     c->drums.running = 1;
 }
 static inline void cr_dr_clock_stop(cr_dr_clock_t *c) {
