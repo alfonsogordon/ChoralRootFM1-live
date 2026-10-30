@@ -276,11 +276,27 @@ static cr_dr_clock_t cr_dr_clock;
  * the browser: key-up does not end the sounding root, and the next key
  * replaces it. Turning latch off releases the held root. */
 static uint8_t cr_root_latch, cr_root_held, cr_root_note;
+/* Auto-start is armed at boot; an explicit Stop disarms it until Start.
+ * Kept in the shared audio engine so physical keys and WASM agree. */
+static uint8_t cr_dr_auto_armed = 1;
+static uint8_t cr_root_quant = 2; /* 0 immediate, 1 sixteenth, 2 eighth, 3 quarter, 4 bar */
+static uint8_t cr_root_pending, cr_root_pending_note, cr_root_pending_vel;
+static uint8_t cr_dr_queued_variation;
+static void cr_root_commit(uint8_t note, uint8_t vel)
+{
+    if (cr_root_held)
+        cr_key(&cr, cr_root_note, 100u, 0);
+    cr_root_note = note;
+    cr_root_held = 1;
+    cr_key(&cr, note, vel, 1);
+}
+
 static void cr_root_latch_set(uint8_t enabled)
 {
     if (!enabled && cr_root_held)
         cr_key(&cr, cr_root_note, 100u, 0);
     cr_root_held = 0;
+    cr_root_pending = 0;
     cr_root_latch = !!enabled;
 }
 
@@ -697,25 +713,22 @@ static void cr_apply(const cr_ev_in_t *e)
 {
     switch (e->op) {
     case CRE_KEY:
-        /* Start the accompaniment with the player's first real key-down.
-         * The same event path serves the physical panel and the WASM
-         * emulator, so neither needs its own auto-start implementation. */
-        if (e->v && !cr_dr_clock.drums.running)
+        if (e->v && cr_dr_auto_armed && !cr_dr_clock.drums.running)
             cr_dr_clock_start(&cr_dr_clock);
         if (cr_root_latch) {
             if (e->v) {
-                if (cr_root_held) {
+                if (cr_root_held && cr_root_note == e->a && !cr_root_pending) {
                     cr_key(&cr, cr_root_note, 100u, 0);
-                    if (cr_root_note == e->a) {
-                        cr_root_held = 0;
-                        break; /* tapping the latched root again unlatches */
-                    }
+                    cr_root_held = 0;
+                } else if (!cr_root_held || !cr_root_quant || !cr_dr_clock.drums.running) {
+                    cr_root_pending = 0;
+                    cr_root_commit(e->a, e->b);
+                } else {
+                    cr_root_pending_note = e->a;
+                    cr_root_pending_vel = e->b;
+                    cr_root_pending = 1;
                 }
-                cr_root_note = (uint8_t)e->a;
-                cr_root_held = 1;
-                cr_key(&cr, e->a, e->b, 1);
             }
-            /* Ignore physical key-up while latched. */
         } else {
             cr_key(&cr, e->a, e->b, e->v);
         }
@@ -725,7 +738,7 @@ static void cr_apply(const cr_ev_in_t *e)
     case CRE_MODTOUCH: cr_mod_touch(&cr, (uint8_t)e->v); break;
     case CRE_VOICING: cr_voicing_step(&cr, e->v); break;
     case CRE_BASS_VOICING: cr_bass_voicing_step(&cr, e->v); break;
-    case CRE_PANIC: cr_panic(&cr); cr_loop_panic(&crl); cr_dr_clock_stop(&cr_dr_clock); cr_root_held = 0; break;
+    case CRE_PANIC: cr_panic(&cr); cr_loop_panic(&crl); cr_dr_clock_stop(&cr_dr_clock); cr_root_held = 0; cr_root_pending = 0; cr_dr_auto_armed = 0; break;
     case CRE_PLAYSTYLE: cr_set_playstyle(&cr, (cr_playstyle_t)e->v); break;
     case CRE_EXTADD: cr_set_ext_addition(&cr, (cr_extadd_t)e->v); break;
     case CRE_SECRET: cr_set_secret(&cr, (cr_secret_t)e->v); break;
@@ -748,13 +761,16 @@ static void cr_apply(const cr_ev_in_t *e)
     case CRE_LOOP: cr_loop_op(e); break;
     case CRE_DRUM:
         switch (e->a) {
-        case 0: cr_dr_clock_stop(&cr_dr_clock); break;
-        case 1: cr_dr_clock_start(&cr_dr_clock); break;
+        case 0: cr_dr_clock_stop(&cr_dr_clock); cr_dr_auto_armed = 0; cr_root_pending = 0; break;
+        case 1: cr_dr_auto_armed = 1; cr_dr_clock_start(&cr_dr_clock); break;
         case 2: cr_dr_mute_toggle(&cr_dr_clock.drums, e->b); break;
-        case 3: cr_dr_variation_toggle(&cr_dr_clock.drums); break;
+        case 3: if (cr_dr_clock.drums.running) cr_dr_queued_variation ^= 1u;
+                else cr_dr_variation_toggle(&cr_dr_clock.drums); break;
         case 4: cr_dr_queue(&cr_dr_clock.drums, e->b); break;
         case 5: cr_dr_fill_hold(&cr_dr_clock.drums, e->v); break;
         case 6: cr_root_latch_set((uint8_t)e->v); break;
+        case 7: cr_root_quant = (uint8_t)(e->v >= 0 && e->v <= 4 ? e->v : 2); break;
+        case 8: cr_dr_auto_armed = !!e->v; break;
         default: break;
         }
         break;
