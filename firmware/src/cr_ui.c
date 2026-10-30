@@ -662,6 +662,16 @@ static void cu_pos_sync(void)
     cs.pool_pos[1][eng_rank(trk[CR_PART_BASS].eng_req % NENGINES)] = (uint8_t)p1;
 }
 
+/* ChoralRoot+ live-drum commands always travel through the audio event queue.
+ * This UI-facing adapter keeps the ISR's transport state single-owned. */
+static void cu_drums_start(void) { cr_post(CRE_DRUM, 1, 0, 0); }
+static void cu_drums_stop(void) { cr_post(CRE_DRUM, 0, 0, 0); }
+static void cu_drums_mute(unsigned lane) { if (lane < CR_DR_PARTS) cr_post(CRE_DRUM, 2, lane, 0); }
+static void cu_drums_variation(void) { cr_post(CRE_DRUM, 3, 0, 0); }
+static void cu_drums_action(unsigned action) {
+    if (action >= CR_DR_ACT_FILL && action <= CR_DR_ACT_BREAK) cr_post(CRE_DRUM, 4, action, 0);
+}
+static void cu_drums_fill_hold(int held) { cr_post(CRE_DRUM, 5, 0, !!held); }
 static void cu_post_key(void) { cr_post(CRE_KEYMODE, cs.key_on, cs.tonic, cs.scale); }
 static void cu_post_single(void)
 {
