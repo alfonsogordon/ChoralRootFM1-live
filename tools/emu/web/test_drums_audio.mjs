@@ -34,7 +34,7 @@ for (let i = 0; i < 800; ++i) {
   for (const v of l) energy += v * v;
 }
 if (!(ex.web_drums_state() & 256)) throw Error("Drums never started");
-console.log("Firmware drum audio energy:", energy);
+console.log("Firmware drum audio energy:", energy, "engine/voices/ready:", ex.web_drums_diag?.().toString(16));
 if (energy <= 0.000001) throw Error("No audible firmware drum audio in WebAssembly output");
 if (!ex.web_drums(2, 0)) throw Error("Mute command rejected");
 ex.web_render(128);
