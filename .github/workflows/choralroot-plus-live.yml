@@ -1,0 +1,49 @@
+name: ChoralRoot Plus live web app
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firmware/src/**'
+      - 'tools/emu/**'
+      - '.github/workflows/choralroot-plus-live.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: choralroot-plus-live
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install pillow==11.1.0 fonttools==4.66.1 uharfbuzz
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: '4.0.15'
+      - run: python -c 'import sys; sys.path.insert(0, "tools"); import build; build.generate()'
+      - run: sh tools/emu/web/build_web.sh
+      - name: Verify real drum audio before deployment
+        run: node tools/emu/web/test_drums_audio.mjs
+      - name: Prepare hosted web app
+        run: |
+          test -s build/emu-web/index.html
+          test -s build/emu-web/choralroot.wasm
+          cp -r build/emu-web build/live-site
+          touch build/live-site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/live-site
+      - name: Deploy live app
+        id: deployment
+        uses: actions/deploy-pages@v4
