@@ -272,6 +272,7 @@ static uint32_t cr_clk_acc;                      /* MIDI clock: samples x bpm x 
  * is deliberately separate from chord and bass routing. */
 #include "cr_dr_clock.h"
 static cr_dr_clock_t cr_dr_clock;
+static void cr_midi(uint32_t status, uint32_t d1, uint32_t d2);
 static void cr_dr_emit_midi(void *unused, uint8_t step, uint8_t mask)
 {
     unsigned lane;
