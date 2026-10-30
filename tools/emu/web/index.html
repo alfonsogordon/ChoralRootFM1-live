@@ -63,7 +63,7 @@ footer { margin-top: 24px; font-size: 13px; color: var(--grey); text-align: cent
 </head>
 <body>
 <div class="wrap">
-  <div style="background:#25231b;padding:12px;text-align:center;font-weight:700">ChoralRoot+ experiment: <a href="drum-live.html">Try live drums, independent mutes and fills</a> (separate audio prototype)</div>\n<header>
+  <header>
     <h1>ChoralRoot <span>FM-1</span> &middot; try it</h1>
     <a href="../">&larr; back to ChoralRoot</a>
   </header>
@@ -88,6 +88,29 @@ footer { margin-top: 24px; font-size: 13px; color: var(--grey); text-align: cent
       <label hidden>In <select id="min"><option value="">none</option></select></label>
       <button id="reset" class="btn" title="forget the saved settings and sounds (this browser only)">Reset flash</button>
     </div>
+    <section id="drum-controls" aria-label="ChoralRoot+ integrated drum controls" style="width:100%;max-width:1080px;padding:16px;background:#242322;border:1px solid #6A696A">
+      <h2 style="margin:0 0 10px;color:#F6B600">ChoralRoot+ · Live Drums</h2>
+      <p style="margin:0 0 12px">Runs the firmware's own drum engine. Press Start above to enable audio.</p>
+      <div class="bar" style="justify-content:flex-start;margin-bottom:10px">
+        <button class="btn" data-drum-op="1">Drums Start</button>
+        <button class="btn" data-drum-op="0">Drums Stop</button>
+        <button class="btn" data-drum-op="3">A / B</button>
+        <button class="btn" data-drum-op="4" data-drum-value="1">Fill</button>
+        <button class="btn" data-drum-op="4" data-drum-value="2">Bridge</button>
+        <button class="btn" data-drum-op="4" data-drum-value="3">Break</button>
+      </div>
+      <div class="bar" style="justify-content:flex-start">
+        <button class="btn" data-drum-op="2" data-drum-value="0" aria-pressed="false">Kick</button>
+        <button class="btn" data-drum-op="2" data-drum-value="1" aria-pressed="false">Snare</button>
+        <button class="btn" data-drum-op="2" data-drum-value="2" aria-pressed="false">Clap</button>
+        <button class="btn" data-drum-op="2" data-drum-value="3" aria-pressed="false">Closed Hat</button>
+        <button class="btn" data-drum-op="2" data-drum-value="4" aria-pressed="false">Open Hat</button>
+        <button class="btn" data-drum-op="2" data-drum-value="5" aria-pressed="false">Tom</button>
+        <button class="btn" data-drum-op="2" data-drum-value="6" aria-pressed="false">Rim</button>
+        <button class="btn" data-drum-op="2" data-drum-value="7" aria-pressed="false">Bell</button>
+      </div>
+      <p id="drum-status" role="status" style="margin:10px 0 0">Drums stopped · variation A · all lanes on</p>
+    </section>
     <section class="legend" aria-label="Computer keyboard">
       <div style="background:#F6F2EE"><h3>Chords</h3><p><kbd>F1</kbd>&ndash;<kbd>F3</kbd> DIM MIN MAJ, <kbd>F2</kbd>+<kbd>F3</kbd> SUS &middot; <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> <kbd>Tab</kbd> 6 m7 M7 9 &middot; <kbd>F8</kbd> LOCK, <kbd>F10</kbd> held + <kbd>F8</kbd> LATCH &middot; Classic chord keys (Options &gt; Chord Keys): <kbd>F1</kbd>&ndash;<kbd>F4</kbd> DIM MIN MAJ SUS, <kbd>2</kbd>&ndash;<kbd>5</kbd> 6 m7 M7 9, <kbd>Tab</kbd> LOCK</p></div>
       <div style="background:#F6B600"><h3>Roots</h3><p><kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> &hellip; <kbd>'</kbd> <kbd>]</kbd> white C4&ndash;G5 &middot; <kbd>W</kbd> <kbd>E</kbd> <kbd>T</kbd> <kbd>Y</kbd> <kbd>U</kbd> <kbd>O</kbd> <kbd>P</kbd> black (as Ableton)</p></div>
