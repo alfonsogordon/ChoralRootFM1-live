@@ -383,6 +383,7 @@
       (action ? " · " + ["", "Fill", "Bridge", "Break"][action] : "") +
       (((raw >> 20) & 7) ? " · queued " + ["", "Fill", "Bridge", "Break"][(raw >> 20) & 7] : "") +
       ((raw & (1 << 19)) ? " · A/B queued" : "") +
+      ((raw & (1 << 23)) ? " · START QUEUED FOR NEXT BAR" : "") +
       (!running && !(raw & (1 << 15)) ? " · manual stop (re-arm with Start)" : "");
     document.querySelectorAll('[data-drum-op="2"]').forEach((button) => {
       const isMuted = !!(muted & (1 << Number(button.dataset.drumValue)));
