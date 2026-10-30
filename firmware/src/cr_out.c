@@ -292,11 +292,18 @@ static void cr_dr_emit_midi(void *unused, uint8_t step, uint8_t mask)
     (void)step;
     for (lane = 0; lane < CR_DR_PARTS; ++lane)
         if (mask & (1u << lane)) {
-            /* Part 3 is the inherited DRUM kit (ENGI_DRUM in TRK_DEF).
-             * Its oneshot envelopes release themselves; no note-off needed. */
+            /* Musical accents rather than identical velocity on every hit.
+             * Deterministic, with no random-number work in the audio ISR. */
+            uint8_t vel = (uint8_t)((step & 3u) == 0u ? 105u :
+                                    (step & 3u) == 2u ? 83u : 63u);
+            if (lane == CR_DR_KICK) vel = (uint8_t)((step & 3u) ? 78u : 112u);
+            if (lane == CR_DR_SNARE) vel = (uint8_t)((step & 3u) ? 76u : 108u);
+            if (lane == CR_DR_HAT_CLOSED || lane == CR_DR_HAT_OPEN)
+                vel = (uint8_t)((step & 3u) == 0u ? 75u :
+                                (step & 1u) ? 43u : 60u);
             if (trk[3].eng_req == ENGI_DRUM)
-                trk_note_on(&trk[3], cr_dr_gm_notes[lane], 100u);
-            cr_midi(0x99u, cr_dr_gm_notes[lane], 100u);
+                trk_note_on(&trk[3], cr_dr_gm_notes[lane], vel);
+            cr_midi(0x99u, cr_dr_gm_notes[lane], vel);
         }
 }
 static volatile uint16_t cr_out_bpm = 120;       /* the tempo the clock pulses at (the UI sets it with the engine's) */
