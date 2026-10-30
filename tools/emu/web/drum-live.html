@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ChoralRoot+ Live Drums — experimental preview</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui;background:#090a0c;color:#eee}body{max-width:800px;margin:24px auto;padding:0 16px}h1{margin-bottom:4px}p{color:#aaa}.panel{background:#191b20;border:1px solid #3b3e47;border-radius:16px;padding:20px;margin:16px 0}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}button,select,input{font:inherit}button{border:1px solid #777;background:#30343e;color:#fff;padding:16px 6px;border-radius:9px;cursor:pointer;touch-action:manipulation}button.on{background:#176b51;border-color:#45cba2}button.muted{background:#543039;color:#ddd}button.queued{border-color:#ffc15d;color:#ffc15d}button:focus-visible{outline:3px solid #ffc15d}small{display:block;color:#aaa}label{display:grid;gap:6px}select{background:#292d35;color:white;padding:10px;border-radius:7px}input{width:100%}.controls{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}#status{color:#f8c978;font-weight:bold}kbd{background:#343841;padding:3px 6px;border-radius:4px}@media(max-width:520px){.grid{grid-template-columns:repeat(2,1fr)}.controls{grid-template-columns:1fr 1fr}}
+</style></head><body>
+<h1>ChoralRoot<span style="color:#f6b600">+</span> / Live Drums</h1>
+<p>Experimental browser audio prototype. This is <strong>not</strong> the firmware emulator or an installable FM1 build. Test the live mute, variation, fill and bridge workflow here.</p>
+<div class="panel"><div class="controls">
+<label>Style<select id="style"><option>Lo-fi</option><option>House</option><option>Techno</option><option>Ambient</option><option>Breakbeat</option></select></label>
+<label>Tempo <output id="bpmout">94</output> BPM<input id="bpm" type="range" min="55" max="180" value="94"></label>
+<label>Swing <output id="swingout">0</output>%<input id="swing" type="range" min="0" max="55" value="0"></label>
+</div></div>
+<div class="panel"><h2>Drum Live</h2><div class="grid">
+<button class="on" data-part="0">C4<br>KICK<small>ON</small></button><button class="on" data-part="1">C#4<br>SNARE<small>ON</small></button><button class="on" data-part="2">D4<br>HATS<small>ON</small></button><button class="on" data-part="3">D#4<br>PERC<small>ON</small></button>
+<button id="variation">E4<br>VAR A</button><button id="fill">F4<br>FILL</button><button id="bridge">F#4<br>BRIDGE</button><button id="play">G4<br>PLAY</button>
+</div><p id="status" role="status">Stopped · Variation A</p>
+<p>Tap a drum part to mute/unmute. Tap FILL for a one-bar fill; hold FILL to repeat fills. Tap BRIDGE for a one-bar breakdown. Tap VAR to switch A/B at the next bar. All mutes persist through transitions.</p></div>
+<div class="panel"><h2>Keyboard shortcuts</h2><p><kbd>1</kbd> Kick · <kbd>2</kbd> Snare · <kbd>3</kbd> Hats · <kbd>4</kbd> Perc · <kbd>5</kbd> Variation · <kbd>6</kbd> Fill · <kbd>7</kbd> Bridge · <kbd>Space</kbd> Play/Stop</p><p>Audio starts after pressing Play (browser audio permission). This demo uses Web Audio drum synthesis, not ChoralRoot's embedded DSP.</p><p><a href="./">Back to original ChoralRoot emulator</a></p></div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id),parts=[true,true,true,true];let audio=null,master=null,playing=false,step=0,next=0,timer=null,variation=0,pendingVar=null,queued=null,active=null,fillHeld=false,fillHoldTimer=null,fillStart=0;
+const notes={kick:60,snare:180,hat:7000,perc:440};
+function init(){if(audio)return;audio=new (window.AudioContext||window.webkitAudioContext)();master=audio.createGain();master.gain.value=.43;master.connect(audio.destination)}
+function osc(t,f,end,level,type='sine'){let o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(Math.max(25,f*.46),t+end);g.gain.setValueAtTime(level,t);g.gain.exponentialRampToValueAtTime(.001,t+end);o.connect(g).connect(master);o.start(t);o.stop(t+end+.01)}
+function noise(t,dur,level,hp){let b=audio.createBuffer(1,Math.ceil(audio.sampleRate*dur),audio.sampleRate),a=b.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;let src=audio.createBufferSource(),filter=audio.createBiquadFilter(),g=audio.createGain();src.buffer=b;filter.type='highpass';filter.frequency.value=hp;g.gain.setValueAtTime(level,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);src.connect(filter).connect(g).connect(master);src.start(t);src.stop(t+dur)}
+function hit(part,t,accent=1){if(!parts[part])return;if(part===0)osc(t,145,.22,.8*accent);if(part===1){noise(t,.16,.4*accent,1200);osc(t,190,.08,.12*accent)}if(part===2)noise(t,.055,.19*accent,5800);if(part===3)osc(t,550,.09,.16*accent,'triangle')}
+function pattern(s){const st=$('style').value;let k=false,sn=false,h=false,p=false;const b=s%16;switch(st){case'House':k=b%4===0;sn=b===4||b===12;h=b%2===2;p=b===15;break;case'Techno':k=b%4===0;sn=b===4||b===12;h=b%2===0;p=b===7||b===15;break;case'Ambient':k=b===0||b===10;sn=b===12;h=b%4===2;p=b===7;break;case'Breakbeat':k=[0,3,8,11].includes(b);sn=[4,10,12].includes(b);h=b%2===0;p=[7,15].includes(b);break;default:k=[0,7,10].includes(b);sn=b===4||b===12;h=b%2===0;p=b===14}
+if(variation){k=k||b===14;h=h||b===15;p=p||b===3}
+if(active==='fill'&&b>=8){sn=sn||b%2===0;h=true;p=p||b%3===0}
+if(active==='bridge'){k=false;sn=false;h=b===14||b===15;p=b===15}
+return [k,sn,h,p]}
+function boundary(){if(pendingVar!==null){variation=pendingVar;pendingVar=null}active=queued||((fillHeld)?'fill':null);queued=null;update()}
+function tick(){if(!playing||!audio)return;const now=audio.currentTime;while(next<now+.12){if(step%16===0)boundary();let b=step%16,pat=pattern(step),swing=(+$('swing').value/100)*(.6*60/(+$('bpm').value)/4),when=next+(b%2?swing:0);pat.forEach((yes,i)=>{if(yes)hit(i,when,b===0?1.15:1)});step++;next+=60/(+$('bpm').value)/4}update()}
+function update(){document.querySelectorAll('[data-part]').forEach((b,i)=>{b.classList.toggle('on',parts[i]);b.classList.toggle('muted',!parts[i]);b.querySelector('small').textContent=parts[i]?'ON':'MUTED'});$('variation').innerHTML='E4<br>VAR '+(pendingVar===null?(variation?'B':'A'):'→'+(pendingVar?'B':'A'));$('play').innerHTML='G4<br>'+(playing?'STOP':'PLAY');$('fill').classList.toggle('queued',queued==='fill'||fillHeld);$('bridge').classList.toggle('queued',queued==='bridge');$('status').textContent=(playing?'Playing · Bar '+(Math.floor(step/16)+1):'Stopped')+' · Variation '+(variation?'B':'A')+(active?' · '+active.toUpperCase():'')+(queued?' · '+queued.toUpperCase()+' queued':'')}
+async function toggle(){init();await audio.resume();playing=!playing;if(playing){step=0;next=audio.currentTime+.08;timer=setInterval(tick,25)}else{clearInterval(timer);active=queued=null;fillHeld=false}update()}
+document.querySelectorAll('[data-part]').forEach(b=>b.addEventListener('click',()=>{let i=+b.dataset.part;parts[i]=!parts[i];update()}));
+$('variation').onclick=()=>{pendingVar=1-variation;update()};$('bridge').onclick=()=>{queued='bridge';update()};$('play').onclick=toggle;
+$('fill').addEventListener('pointerdown',()=>{fillStart=performance.now();fillHoldTimer=setTimeout(()=>{fillHeld=true;queued='fill';update()},400)});
+function endFill(){clearTimeout(fillHoldTimer);if(performance.now()-fillStart<400){queued='fill'}else{fillHeld=false}update()}
+$('fill').addEventListener('pointerup',endFill);$('fill').addEventListener('pointercancel',()=>{clearTimeout(fillHoldTimer);fillHeld=false;update()});
+$('bpm').oninput=()=>{$('bpmout').textContent=$('bpm').value};$('swing').oninput=()=>{$('swingout').textContent=$('swing').value};
+document.addEventListener('keydown',e=>{if(e.repeat||['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return;let k=e.key;if('1234'.includes(k)&&k.length===1)document.querySelector('[data-part="'+(+k-1)+'"]').click();else if(k==='5')$('variation').click();else if(k==='6'){queued='fill';update()}else if(k==='7')$('bridge').click();else if(k===' '){e.preventDefault();toggle()}});
+update();
+</script></body></html>
