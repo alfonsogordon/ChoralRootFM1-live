@@ -305,7 +305,18 @@ static void cr_dr_emit_midi(void *unused, uint8_t step, uint8_t mask)
 {
     unsigned lane;
     (void)unused;
-    (void)step;
+    if (step == 0u && cr_dr_queued_variation) {
+        cr_dr_variation_toggle(&cr_dr_clock.drums);
+        cr_dr_queued_variation = 0;
+        mask = cr_dr_step_mask(&cr_dr_clock.drums, step);
+    }
+    if (cr_root_pending && (cr_root_quant == 1u ||
+        (cr_root_quant == 2u && !(step & 1u)) ||
+        (cr_root_quant == 3u && !(step & 3u)) ||
+        (cr_root_quant == 4u && step == 0u))) {
+        cr_root_commit(cr_root_pending_note, cr_root_pending_vel);
+        cr_root_pending = 0;
+    }
     for (lane = 0; lane < CR_DR_PARTS; ++lane)
         if (mask & (1u << lane)) {
             /* Musical accents rather than identical velocity on every hit.
@@ -761,8 +772,8 @@ static void cr_apply(const cr_ev_in_t *e)
     case CRE_LOOP: cr_loop_op(e); break;
     case CRE_DRUM:
         switch (e->a) {
-        case 0: cr_dr_clock_stop(&cr_dr_clock); cr_dr_auto_armed = 0; cr_root_pending = 0; break;
-        case 1: cr_dr_auto_armed = 1; cr_dr_clock_start(&cr_dr_clock); break;
+        case 0: cr_dr_clock_stop(&cr_dr_clock); cr_dr_auto_armed = 0; cr_root_pending = 0; cr_dr_queued_variation = 0; break;
+        case 1: cr_dr_auto_armed = 1; cr_dr_queued_variation = 0; cr_dr_clock_start(&cr_dr_clock); break;
         case 2: cr_dr_mute_toggle(&cr_dr_clock.drums, e->b); break;
         case 3: if (cr_dr_clock.drums.running) cr_dr_queued_variation ^= 1u;
                 else cr_dr_variation_toggle(&cr_dr_clock.drums); break;
