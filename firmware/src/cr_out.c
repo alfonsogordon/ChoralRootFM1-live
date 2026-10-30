@@ -677,7 +677,14 @@ static void cr_loop_op(const cr_ev_in_t *e)
 static void cr_apply(const cr_ev_in_t *e)
 {
     switch (e->op) {
-    case CRE_KEY: cr_key(&cr, e->a, e->b, e->v); break;
+    case CRE_KEY:
+        /* Start the accompaniment with the player's first real key-down.
+         * The same event path serves the physical panel and the WASM
+         * emulator, so neither needs its own auto-start implementation. */
+        if (e->v && !cr_dr_clock.drums.running)
+            cr_dr_clock_start(&cr_dr_clock);
+        cr_key(&cr, e->a, e->b, e->v);
+        break;
     case CRE_MOD: cr_mod_ex(&cr, (cr_mod_t)e->a, e->v, e->b); break;
     case CRE_MODLOCK: cr_mod_lock(&cr, e->v); break;
     case CRE_MODTOUCH: cr_mod_touch(&cr, (uint8_t)e->v); break;
