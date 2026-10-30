@@ -41,6 +41,8 @@ jobs:
           cp -r build/emu-web build/live-site
           touch build/live-site/.nojekyll
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/live-site
