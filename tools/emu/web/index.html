@@ -98,6 +98,8 @@ footer { margin-top: 24px; font-size: 13px; color: var(--grey); text-align: cent
         <button class="btn" data-drum-op="4" data-drum-value="1">Fill</button>
         <button class="btn" data-drum-op="4" data-drum-value="2">Bridge</button>
         <button class="btn" data-drum-op="4" data-drum-value="3">Break</button>
+        <label style="color:var(--cream)">Tempo <input id="drum-bpm" type="number" min="40" max="240" value="120" style="width:78px;padding:8px;background:var(--dark);color:var(--cream);border:1px solid var(--grey)"></label>
+        <button class="btn" id="drum-tempo-apply">Set BPM</button>
       </div>
       <div class="bar" style="justify-content:flex-start">
         <button class="btn" data-drum-op="2" data-drum-value="0" aria-pressed="false">Kick</button>
