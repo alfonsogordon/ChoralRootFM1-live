@@ -279,8 +279,13 @@ static void cr_dr_emit_midi(void *unused, uint8_t step, uint8_t mask)
     (void)unused;
     (void)step;
     for (lane = 0; lane < CR_DR_PARTS; ++lane)
-        if (mask & (1u << lane))
+        if (mask & (1u << lane)) {
+            /* Part 3 is the inherited DRUM kit (ENGI_DRUM in TRK_DEF).
+             * Its oneshot envelopes release themselves; no note-off needed. */
+            if (trk[3].eng_req == ENGI_DRUM)
+                trk_note_on(&trk[3], cr_dr_gm_notes[lane], 100u);
             cr_midi(0x99u, cr_dr_gm_notes[lane], 100u);
+        }
 }
 static volatile uint16_t cr_out_bpm = 120;       /* the tempo the clock pulses at (the UI sets it with the engine's) */
 static volatile uint32_t cr_out_notes;           /* note-ons emitted (diagnostics, the emulator's dump) */
