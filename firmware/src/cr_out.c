@@ -740,6 +740,33 @@ static void cr_apply(const cr_ev_in_t *e)
                     cr_root_pending = 1;
                 }
             }
+        } else if (cr_root_quant && cr_dr_clock.drums.running) {
+            /* Quantize root changes even with latch OFF. The initial key
+             * remains immediate; held changes wait for the next grid line.
+             * A released pending key is cancelled, avoiding stuck notes. */
+            if (e->v) {
+                if (!cr_root_held) {
+                    cr_root_pending = 0;
+                    cr_root_commit(e->a, e->b);
+                } else if (e->a == cr_root_note) {
+                    /* A repeated key-down is not a chord change. */
+                } else {
+                    cr_root_pending_note = e->a;
+                    cr_root_pending_vel = e->b;
+                    cr_root_pending = 1;
+                }
+            } else if (cr_root_pending && e->a == cr_root_pending_note) {
+                cr_root_pending = 0;
+            } else if (cr_root_held && e->a == cr_root_note) {
+                /* Do not silence the current harmony while a replacement
+                 * is waiting for the beat. */
+                if (!cr_root_pending) {
+                    cr_key(&cr, cr_root_note, 100u, 0);
+                    cr_root_held = 0;
+                }
+            } else {
+                cr_key(&cr, e->a, e->b, 0);
+            }
         } else {
             cr_key(&cr, e->a, e->b, e->v);
         }
