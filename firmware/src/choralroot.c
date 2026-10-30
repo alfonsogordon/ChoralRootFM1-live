@@ -72,7 +72,7 @@
 #define GRAIN_ASYNC 1            /* GRAIN renders its buffers in slices from main.c's idle loop (grain_poll) */
 #endif
 #ifndef FELUCCA_DRUM
-#define FELUCCA_DRUM 0           /* no DRUM engine (engine 10: a retired slot; frees its kit's POOL) */
+#define FELUCCA_DRUM 1           /* ChoralRoot+ experiment: include the inherited 8-lane drum engine */
 #endif
 #ifndef FELUCCA_ANALOG
 #define FELUCCA_ANALOG 0         /* no ANALOG engine (engine 0: a retired slot; the VA replaces it, its records load there) */
