@@ -162,7 +162,7 @@ WEB_EXPORT uint32_t web_drums_state(void)
 {
     const cr_live_drums_t *d = &cr_dr_clock.drums;
     return (uint32_t)d->mute_mask | ((uint32_t)!!d->running << 8) |
-           ((uint32_t)!!d->variation << 9) | ((uint32_t)d->active_action << 10) | ((uint32_t)cr_root_latch << 13) | ((uint32_t)cr_root_held << 14) | ((uint32_t)cr_dr_auto_armed << 15) | ((uint32_t)cr_root_quant << 16) | ((uint32_t)cr_dr_queued_variation << 19) | ((uint32_t)d->queued_action << 20);
+           ((uint32_t)!!d->variation << 9) | ((uint32_t)d->active_action << 10) | ((uint32_t)cr_root_latch << 13) | ((uint32_t)cr_root_held << 14) | ((uint32_t)cr_dr_auto_armed << 15) | ((uint32_t)cr_root_quant << 16) | ((uint32_t)cr_dr_queued_variation << 19) | ((uint32_t)d->queued_action << 20) | ((uint32_t)cr_dr_start_queued << 23);
 }
 WEB_EXPORT uint32_t web_drums_tempo(uint32_t bpm)
 {
