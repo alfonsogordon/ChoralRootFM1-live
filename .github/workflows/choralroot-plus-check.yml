@@ -32,6 +32,10 @@ jobs:
           /tmp/cr_dr_clock_test
           cc -std=c11 -Wall -Wextra -Werror -Ifirmware/src tests/cr_dr_regression_test.c -o /tmp/cr_dr_regression_test
           /tmp/cr_dr_regression_test
+      - name: Check integrated browser JavaScript
+        run: |
+          node --check tools/emu/web/emu.js
+          node --check tools/emu/web/worklet.js
       - name: Build browser firmware
         run: sh tools/emu/web/build_web.sh
       - name: Upload browser preview for inspection
