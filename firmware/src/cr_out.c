@@ -559,6 +559,7 @@ enum {
     CRE_FULLCHORD,    /* v: the Full keyboard's G5 (Full K Shorts): 0 none, 1 chords on every key, 2 single notes
                        * (cr_set_full_chords) */
     CRE_LOOP,         /* a: LP_*, b / v: its argument */
+    CRE_DRUM,         /* a: 0 stop, 1 start, 2 mute, 3 variation, 4 action, 5 fill hold; b: lane/action */
     CRE_AT            /* v: the keys' aftertouch 0..127 (cr_ui.c cu_touch_poll): both parts, channel pressure out */
 };
 /* CRE_LOOP's operations */
@@ -703,6 +704,17 @@ static void cr_apply(const cr_ev_in_t *e)
     case CRE_KEYSNAP: cr_set_key_snap(&cr, (cr_keysnap_t)e->v); break;
     case CRE_FULLCHORD: cr_set_full_chords(&cr, e->v); break;
     case CRE_LOOP: cr_loop_op(e); break;
+    case CRE_DRUM:
+        switch (e->a) {
+        case 0: cr_dr_clock_stop(&cr_dr_clock); break;
+        case 1: cr_dr_clock_start(&cr_dr_clock); break;
+        case 2: cr_dr_mute_toggle(&cr_dr_clock.drums, e->b); break;
+        case 3: cr_dr_variation_toggle(&cr_dr_clock.drums); break;
+        case 4: cr_dr_queue(&cr_dr_clock.drums, e->b); break;
+        case 5: cr_dr_fill_hold(&cr_dr_clock.drums, e->v); break;
+        default: break;
+        }
+        break;
     case CRE_AT: cr_touch_at((uint32_t)e->v); break;
     default: break;
     }
