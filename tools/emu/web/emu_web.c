@@ -151,6 +151,11 @@ WEB_EXPORT void web_boot(void)
  * knob 0..7 (K1..K8) n detents (+ clockwise), pad 0..15 (0..7 the top row) at velocity vel (0: let go), fader 0..3
  * 0..127, wheel 0 pitch / 1 mod as a raw reading (pitch 445..640, at rest 535; mod 474 top .. 629 bottom) */
 /* Integrated ChoralRoot+ drum controls: same event queue as the physical UI. */
+WEB_EXPORT uint32_t web_drums_tempo(uint32_t bpm)
+{
+    if (bpm < 40u || bpm > 240u) return 0;
+    return (uint32_t)cr_post(CRE_TEMPO, 0, 0, (int32_t)bpm);
+}
 WEB_EXPORT uint32_t web_drums(uint32_t op, uint32_t value)
 {
     if (op > 5u || (op == 2u && value >= CR_DR_PARTS) ||
