@@ -150,6 +150,15 @@ WEB_EXPORT void web_boot(void)
 /* the SMK-37's panel (hardware ids, hal/smk_input.h): key 0..36 = C3..C6 at velocity vel (0: let go), button 0..17,
  * knob 0..7 (K1..K8) n detents (+ clockwise), pad 0..15 (0..7 the top row) at velocity vel (0: let go), fader 0..3
  * 0..127, wheel 0 pitch / 1 mod as a raw reading (pitch 445..640, at rest 535; mod 474 top .. 629 bottom) */
+/* Integrated ChoralRoot+ drum controls: same event queue as the physical UI. */
+WEB_EXPORT uint32_t web_drums(uint32_t op, uint32_t value)
+{
+    if (op > 5u || (op == 2u && value >= CR_DR_PARTS) ||
+        (op == 4u && (value < CR_DR_ACT_FILL || value > CR_DR_ACT_BREAK)))
+        return 0;
+    return (uint32_t)cr_post(CRE_DRUM, op, (op == 2u || op == 4u) ? value : 0u,
+                              op == 5u ? (int32_t)!!value : 0);
+}
 WEB_EXPORT void web_smk_key(uint32_t k, uint32_t vel) { emu_smk_key(k, vel); }
 WEB_EXPORT void web_smk_button(uint32_t b, int down) { emu_smk_button(b, down); }
 WEB_EXPORT void web_smk_enc(uint32_t e, int32_t n) { if (e < FM1_NENC) emu_smk.enc_want[e] += n * 4; }
