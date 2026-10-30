@@ -20,3 +20,11 @@ This repository is the development home for ChoralRoot+ (display name), based on
 5. Integrate emulator controls and audio; test hardware performance, save/restore and installation safety.
 
 Status: roadmap committed; features not yet implemented.
+
+## Confirmed upstream drum-engine status (source inspection)
+- `firmware/src/choralroot.c` defaults `FELUCCA_DRUM` to `0`: the inherited `eng_drum.c` is not compiled in the stock ChoralRoot build.
+- `firmware/src/engines.c` conditionally registers engine slot 10 only when `FELUCCA_DRUM` is enabled; otherwise the slot is `ENG_GONE`.
+- `firmware/src/cr_ui.c` explicitly excludes `ENGI_DRUM` from its pitched-sound engine picker.
+- Reuse the existing eight-lane `eng_drum.c` / `drum_voice.c` synthesis, but do not simply flip the compile flag without validating memory, audio part routing, engine registration, and host/emulator builds.
+- The four live mute groups are kick, snare/clap, closed/open hats, and tom/rim/bell percussion. All eight internal voices can remain distinct while grouped into four convenient live controls.
+- Stock ChoralRoot remains unchanged; this work belongs in the fork.
