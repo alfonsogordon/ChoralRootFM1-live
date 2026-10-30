@@ -340,27 +340,32 @@
     status("Firmware tempo set to " + bpm + " BPM.");
   };
   // ChoralRoot+ drum panel controls the SAME WebAssembly firmware as the keyboard.
-  let drumsRunning = false, drumsVariation = false, drumsMuted = 0;
+  // Firmware state is authoritative: do not predict mutes or transport locally.
   document.querySelectorAll("[data-drum-op]").forEach((button) => {
     button.addEventListener("click", () => {
       if (!node) { status("Press Start to enable the firmware audio first."); return; }
-      const op = Number(button.dataset.drumOp);
-      const value = Number(button.dataset.drumValue || 0);
-      node.port.postMessage({ type: "drums", op, value });
-      if (op === 0) drumsRunning = false;
-      if (op === 1) drumsRunning = true;
-      if (op === 2) {
-        drumsMuted ^= 1 << value;
-        button.setAttribute("aria-pressed", String(!!(drumsMuted & (1 << value))));
-        button.style.opacity = drumsMuted & (1 << value) ? "0.45" : "1";
-      }
-      if (op === 3) drumsVariation = !drumsVariation;
-      const state = document.getElementById("drum-status");
-      if (state) state.textContent = "Drums " + (drumsRunning ? "running" : "stopped") +
-        " · variation " + (drumsVariation ? "B" : "A") +
-        " · " + (8 - drumsMuted.toString(2).replace(/0/g, "").length) + "/8 lanes active";
+      node.port.postMessage({
+        type: "drums", op: Number(button.dataset.drumOp),
+        value: Number(button.dataset.drumValue || 0)
+      });
     });
   });
+  const updateDrums = (raw) => {
+    if (raw == null) return;
+    const muted = raw & 255, running = !!(raw & 256);
+    const variation = raw & 512 ? "B" : "A";
+    const action = (raw >> 10) & 7;
+    const count = 8 - muted.toString(2).replace(/0/g, "").length;
+    const state = document.getElementById("drum-status");
+    if (state) state.textContent = "Drums " + (running ? "running" : "stopped") +
+      " · variation " + variation + " · " + count + "/8 lanes active" +
+      (action ? " · " + ["", "Fill", "Bridge", "Break"][action] : "");
+    document.querySelectorAll('[data-drum-op="2"]').forEach((button) => {
+      const isMuted = !!(muted & (1 << Number(button.dataset.drumValue)));
+      button.setAttribute("aria-pressed", String(isMuted));
+      button.style.opacity = isMuted ? "0.45" : "1";
+    });
+  };
 
   $("start").onclick = async () => {
     $("start").disabled = true;
@@ -382,6 +387,7 @@
   };
   const onWorklet = (m) => {
     if (m.type === "frame") {
+      updateDrums(m.drums);
       if (m.fb) drawFb(m.fb);
       if ((m.layout | 0) !== layout) setLayout(m.layout);
       drawLeds(m.leds);
