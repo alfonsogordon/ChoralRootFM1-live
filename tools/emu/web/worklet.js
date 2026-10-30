@@ -60,6 +60,7 @@ class FM1 extends AudioWorkletProcessor {
     if (!ex) return;
     switch (m.type) {
       case "drums": if (ex.web_drums) ex.web_drums(m.op >>> 0, m.value >>> 0); break;
+      case "drum-tempo": if (ex.web_drums_tempo) ex.web_drums_tempo(m.bpm >>> 0); break;
       case "keys": ex.web_keys(m.mask >>> 0); break;
       case "buttons": ex.web_buttons(m.mask >>> 0); break;
       case "tap": ex.web_keys_tap(m.keys >>> 0); ex.web_buttons_tap(m.buttons >>> 0); break;
