@@ -282,6 +282,8 @@ static uint8_t cr_dr_auto_armed = 1;
 static uint8_t cr_root_quant = 2; /* 0 immediate, 1 sixteenth, 2 eighth, 3 quarter, 4 bar */
 static uint8_t cr_root_pending, cr_root_pending_note, cr_root_pending_vel;
 static uint8_t cr_dr_queued_variation;
+static uint8_t cr_music_started, cr_dr_start_queued, cr_music_step;
+static uint64_t cr_music_phase;
 static void cr_root_commit(uint8_t note, uint8_t vel)
 {
     if (cr_root_held)
@@ -724,8 +726,12 @@ static void cr_apply(const cr_ev_in_t *e)
 {
     switch (e->op) {
     case CRE_KEY:
-        if (e->v && cr_dr_auto_armed && !cr_dr_clock.drums.running)
-            cr_dr_clock_start(&cr_dr_clock);
+        if (e->v && !cr_music_started) {
+            cr_music_started = 1;
+            cr_music_phase = 0;
+            cr_music_step = 0;
+            if (cr_dr_auto_armed) cr_dr_clock_start(&cr_dr_clock);
+        }
         if (cr_root_latch) {
             if (e->v) {
                 if (cr_root_held && cr_root_note == e->a && !cr_root_pending) {
@@ -799,8 +805,14 @@ static void cr_apply(const cr_ev_in_t *e)
     case CRE_LOOP: cr_loop_op(e); break;
     case CRE_DRUM:
         switch (e->a) {
-        case 0: cr_dr_clock_stop(&cr_dr_clock); cr_dr_auto_armed = 0; cr_root_pending = 0; cr_dr_queued_variation = 0; break;
-        case 1: cr_dr_auto_armed = 1; cr_dr_queued_variation = 0; cr_dr_clock_start(&cr_dr_clock); break;
+        case 0: cr_dr_clock_stop(&cr_dr_clock); cr_dr_start_queued = 0; cr_dr_auto_armed = 0; cr_root_pending = 0; cr_dr_queued_variation = 0; break;
+        case 1:
+            cr_dr_auto_armed = 1;
+            cr_dr_queued_variation = 0;
+            if (cr_music_started && !cr_dr_clock.drums.running &&
+                (cr_music_step || cr_music_phase)) cr_dr_start_queued = 1;
+            else { cr_dr_start_queued = 0; cr_dr_clock_start(&cr_dr_clock); }
+            break;
         case 2: cr_dr_mute_toggle(&cr_dr_clock.drums, e->b); break;
         case 3: if (cr_dr_clock.drums.running) cr_dr_queued_variation ^= 1u;
                 else cr_dr_variation_toggle(&cr_dr_clock.drums); break;
@@ -986,6 +998,8 @@ static void cr_out_init(void)                    /* power-on (the audio ISR may 
             trk[3].p[P_E0 + k] = ENG_DRUM.edit[k].def;
     }
     cr_dr_clock_init(&cr_dr_clock);
+    cr_music_started = cr_dr_start_queued = cr_music_step = 0;
+    cr_music_phase = 0;
 #endif
     voice_fade_steal = 1;                        /* voice.c: a stolen voice fades out, its new note waits a block */
     fx_smooth = 1;                               /* fx.c: the limiter's gain eased (no audio-rate crackle), the delay's
@@ -1031,6 +1045,18 @@ static void cr_audio_block(uint32_t n)
         cr_now_ms++;
     }
     cr_tick(&cr, cr_now_ms);
+    if (cr_music_started && cr_out_bpm) {
+        const uint64_t threshold = (uint64_t)FS * 60u;
+        cr_music_phase += (uint64_t)n * cr_out_bpm * 4u;
+        while (cr_music_phase >= threshold) {
+            cr_music_phase -= threshold;
+            cr_music_step = (uint8_t)((cr_music_step + 1u) & 15u);
+            if (!cr_music_step && cr_dr_start_queued) {
+                cr_dr_start_queued = 0;
+                cr_dr_clock_start(&cr_dr_clock);
+            }
+        }
+    }
     cr_dr_clock_advance(&cr_dr_clock, n, FS, cr_out_bpm, cr_dr_emit_midi, 0);
     cr_loop_tick(&crl, &cr, cr_now_ms);          /* the loop's playback and capture, the click */
     if (crl_stage_busy == 2u && !crl.next_on)
