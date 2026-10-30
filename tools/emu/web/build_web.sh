@@ -48,7 +48,7 @@ mkdir -p "$OUT"
 sh tests/hostcc.sh emcc -O2 -w -std=gnu11 -I$W/compat -Ibuild/gen -Ifirmware/src -DEMU_WEB "-DFELUCCA_VERSION=\"$VER\"" \
     --no-entry -sSTANDALONE_WASM -sFILESYSTEM=0 -sSTACK_SIZE=1048576 -sINITIAL_MEMORY=33554432 \
     -o "$OUT/choralroot.wasm" $W/emu_web.c
-cp $W/index.html $W/emu.js $W/keymap.js $W/worklet.js "$OUT/"
+cp $W/index.html $W/emu.js $W/keymap.js $W/worklet.js $W/drum-live.html "$OUT/"
 printf '%s\n' "$VER" > "$OUT/version.txt"        # (web/make_site.py: the landing page says so when it is a beta)
 echo "emu-web: $OUT ($VER)"
 for f in choralroot.wasm index.html emu.js keymap.js worklet.js; do
