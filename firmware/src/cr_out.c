@@ -272,6 +272,18 @@ static uint32_t cr_clk_acc;                      /* MIDI clock: samples x bpm x 
  * is deliberately separate from chord and bass routing. */
 #include "cr_dr_clock.h"
 static cr_dr_clock_t cr_dr_clock;
+/* ChoralRoot+ root-note latch. The latch is shared by physical keys and
+ * the browser: key-up does not end the sounding root, and the next key
+ * replaces it. Turning latch off releases the held root. */
+static uint8_t cr_root_latch, cr_root_held, cr_root_note;
+static void cr_root_latch_set(uint8_t enabled)
+{
+    if (!enabled && cr_root_held)
+        cr_key(&cr, cr_root_note, 100u, 0);
+    cr_root_held = 0;
+    cr_root_latch = !!enabled;
+}
+
 static void cr_midi(uint32_t status, uint32_t d1, uint32_t d2);
 static void cr_dr_emit_midi(void *unused, uint8_t step, uint8_t mask)
 {
@@ -559,7 +571,7 @@ enum {
     CRE_FULLCHORD,    /* v: the Full keyboard's G5 (Full K Shorts): 0 none, 1 chords on every key, 2 single notes
                        * (cr_set_full_chords) */
     CRE_LOOP,         /* a: LP_*, b / v: its argument */
-    CRE_DRUM,         /* a: 0 stop, 1 start, 2 mute, 3 variation, 4 action, 5 fill hold; b: lane/action */
+    CRE_DRUM,         /* a: 0 stop, 1 start, 2 mute, 3 variation, 4 action, 5 fill hold, 6 root latch */
     CRE_AT            /* v: the keys' aftertouch 0..127 (cr_ui.c cu_touch_poll): both parts, channel pressure out */
 };
 /* CRE_LOOP's operations */
@@ -683,14 +695,30 @@ static void cr_apply(const cr_ev_in_t *e)
          * emulator, so neither needs its own auto-start implementation. */
         if (e->v && !cr_dr_clock.drums.running)
             cr_dr_clock_start(&cr_dr_clock);
-        cr_key(&cr, e->a, e->b, e->v);
+        if (cr_root_latch) {
+            if (e->v) {
+                if (cr_root_held) {
+                    cr_key(&cr, cr_root_note, 100u, 0);
+                    if (cr_root_note == e->a) {
+                        cr_root_held = 0;
+                        break; /* tapping the latched root again unlatches */
+                    }
+                }
+                cr_root_note = (uint8_t)e->a;
+                cr_root_held = 1;
+                cr_key(&cr, e->a, e->b, 1);
+            }
+            /* Ignore physical key-up while latched. */
+        } else {
+            cr_key(&cr, e->a, e->b, e->v);
+        }
         break;
     case CRE_MOD: cr_mod_ex(&cr, (cr_mod_t)e->a, e->v, e->b); break;
     case CRE_MODLOCK: cr_mod_lock(&cr, e->v); break;
     case CRE_MODTOUCH: cr_mod_touch(&cr, (uint8_t)e->v); break;
     case CRE_VOICING: cr_voicing_step(&cr, e->v); break;
     case CRE_BASS_VOICING: cr_bass_voicing_step(&cr, e->v); break;
-    case CRE_PANIC: cr_panic(&cr); cr_loop_panic(&crl); cr_dr_clock_stop(&cr_dr_clock); break;
+    case CRE_PANIC: cr_panic(&cr); cr_loop_panic(&crl); cr_dr_clock_stop(&cr_dr_clock); cr_root_held = 0; break;
     case CRE_PLAYSTYLE: cr_set_playstyle(&cr, (cr_playstyle_t)e->v); break;
     case CRE_EXTADD: cr_set_ext_addition(&cr, (cr_extadd_t)e->v); break;
     case CRE_SECRET: cr_set_secret(&cr, (cr_secret_t)e->v); break;
@@ -719,6 +747,7 @@ static void cr_apply(const cr_ev_in_t *e)
         case 3: cr_dr_variation_toggle(&cr_dr_clock.drums); break;
         case 4: cr_dr_queue(&cr_dr_clock.drums, e->b); break;
         case 5: cr_dr_fill_hold(&cr_dr_clock.drums, e->v); break;
+        case 6: cr_root_latch_set((uint8_t)e->v); break;
         default: break;
         }
         break;
