@@ -162,7 +162,7 @@ WEB_EXPORT uint32_t web_drums_state(void)
 {
     const cr_live_drums_t *d = &cr_dr_clock.drums;
     return (uint32_t)d->mute_mask | ((uint32_t)!!d->running << 8) |
-           ((uint32_t)!!d->variation << 9) | ((uint32_t)d->active_action << 10);
+           ((uint32_t)!!d->variation << 9) | ((uint32_t)d->active_action << 10) | ((uint32_t)cr_root_latch << 13) | ((uint32_t)cr_root_held << 14);
 }
 WEB_EXPORT uint32_t web_drums_tempo(uint32_t bpm)
 {
@@ -171,11 +171,11 @@ WEB_EXPORT uint32_t web_drums_tempo(uint32_t bpm)
 }
 WEB_EXPORT uint32_t web_drums(uint32_t op, uint32_t value)
 {
-    if (op > 5u || (op == 2u && value >= CR_DR_PARTS) ||
+    if (op > 6u || (op == 2u && value >= CR_DR_PARTS) ||
         (op == 4u && (value < CR_DR_ACT_FILL || value > CR_DR_ACT_BREAK)))
         return 0;
     return (uint32_t)cr_post(CRE_DRUM, op, (op == 2u || op == 4u) ? value : 0u,
-                              op == 5u ? (int32_t)!!value : 0);
+                              (op == 5u || op == 6u) ? (int32_t)!!value : 0);
 }
 /* ---------------------------------------------------------------------- input --- */
 #if EMU_SMK37
