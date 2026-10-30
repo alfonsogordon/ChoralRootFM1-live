@@ -8735,6 +8735,13 @@ static void cr_ui_init(void)
 #if FELUCCA_SEQ
     song.grid = 2;                                /* seq.c's keyboard never plays (keyboard_block: every key silent) */
 #endif
+#if FELUCCA_DRUM
+    /* The original ChoralRoot boot deliberately silences parts 2 and 3.
+     * Restore the dedicated accompaniment part AFTER all settings loads. */
+    trk[3].eng_req = ENGI_DRUM;
+    trk[3].engine = ENGI_DRUM;
+    trk[3].p[P_MUTE] = 0;
+#endif
     if (cr_safe)
         cu.opt_sel = O_SAFE;                      /* Options opens on Safe Mode (then Flash Data) */
     cu_boot_ms = cu_now();                        /* the splash: the idle stripes' first CR_SPLASH_MS */
